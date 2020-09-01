@@ -1,11 +1,14 @@
 from os import path, mkdir
 from collections import OrderedDict
 from shutil import copyfile
+from subprocess import check_call
 import numpy as np
 import pandas as pd
 import MDAnalysis
+from fluctmatch.miscell import get_patch, check_dir_exist_and_make
+from fluctmatch.charmm import Script
+from fluctmatch.sequence import sequences
 
-root = '/home/yizaochen/PycharmProjects/ENM'
 cmm_root = '/home/yizaochen/PycharmProjects/connect_macro_micro'
 d_atomcgtype = {'O1P': 'P', 'P': 'P', 'O2P': 'P', 'O5\'': 'P',
                 'C5\'': 'P', 'O3\'': 'P', 'C4\'': 'S', 'O4\'': 'S',
@@ -17,7 +20,7 @@ d_atomcgtype = {'O1P': 'P', 'P': 'P', 'O2P': 'P', 'O5\'': 'P',
 
 
 class ENMAgent:
-    def __init__(self, host, type_na):
+    def __init__(self, root, host, type_na):
         self.host = host
         self.type_na = type_na
         self.host_folder = path.join(root, host)
@@ -26,29 +29,34 @@ class ENMAgent:
         self.charmminp_folder = path.join(self.na_folder, 'charmm_inp')
         self.charmmdat_folder = path.join(self.na_folder, 'charmm_dat')
         self.mode_traj_folder = path.join(self.na_folder, 'mode_traj')
-        self.mode0dcd = path.join(self.mode_traj_folder, 'mode.0.dcd')
         self.ic_folder = path.join(self.na_folder, 'ic')
         self.mat_folder = path.join(self.na_folder, 'ic_fluct_mat')
-        self.crd = path.join(self.input_folder,
-                             '{0}.nohydrogen.avg.crd'.format(self.type_na))
+        self.rtficstr_folder = path.join(self.na_folder, 'rtf_ic_str')
         self.datafolder = path.join(self.na_folder, 'data')
         self.backupfolder = path.join(self.datafolder, 'backup')
-        self.enmprm = path.join(self.datafolder, 'na_enm.prm')
-        self.rtficstr_folder = path.join(self.na_folder, 'rtf_ic_str')
-
         self.initialize_folders()
+        
+        self.seq1 = sequences[self.host][self.type_na]['guide']
+        self.seq2 = sequences[self.host][self.type_na]['target']
 
-        if not path.isfile(self.mode0dcd):
-            self.copy_mode0dcd()
-        if not path.isfile(self.crd): 
-            self.copy_avg_crd()
-        self.u = MDAnalysis.Universe(self.crd, self.crd)
-        self.map, self.inverse_map, self.residues_map, self.atomid_map, \
-            self.atomid_map_inverse, self.atomname_map, self.strandid_map,\
-            self.resid_map, self.mass_map = self.build_map()
+        self.enmprm = path.join(self.datafolder, 'na_enm.prm')
+        self.mode0dcd = path.join(self.mode_traj_folder, 'mode.0.dcd')
+        self.crd = path.join(self.input_folder,
+                             '{0}.nohydrogen.avg.crd'.format(self.type_na))
+
+        self.u = None
+        self.map = None
+        self.inverse_map = None
+        self.residues_map = None
+        self.atomid_map = None
+        self.atomid_map_inverse = None
+        self.atomname_map = None
+        self.strandid_map = None
+        self.resid_map = None
+        self.mass_map = None
+
         self.ics = dict()
         self.avgs = dict()
-        self.backupfolder = path.join(self.datafolder, 'backup')
 
     def initialize_folders(self):
         for folder in [self.host_folder, self.na_folder, self.input_folder,
@@ -56,19 +64,42 @@ class ENMAgent:
                        self.mode_traj_folder, self.ic_folder, self.mat_folder,
                        self.rtficstr_folder, self.datafolder, self.backupfolder]:
             check_dir_exist_and_make(folder)
+
+    def check_avg_crd(self):
+        if not path.isfile(self.crd): 
+            print(f'{self.crd} does not exist.')
+            return False
+        else:
+            print(f'{self.crd} exists.')
+            return True
             
-    def copy_avg_crd(self):
-        old_avg_crd = path.join(cmm_root, self.host, self.type_na, 'input', 'heavyatoms', 
-                                f'{self.type_na}.nohydrogen.avg.crd')
+    def copy_avg_crd(self, old_folder):
+        old_avg_crd = path.join(old_folder, self.host, self.type_na, 'input', 'heavyatoms', f'{self.type_na}.nohydrogen.avg.crd')
         copyfile(old_avg_crd, self.crd)
         print(f'cp {old_avg_crd} {self.crd}')
-
-    def copy_mode0dcd(self):
-        old_mode0dcd = path.join(cmm_root, self.host, self.type_na, 'mode_traj', 'mode.0.dcd') 
+    
+    def check_mode0dcd(self):
+        if not path.isfile(self.mode0dcd): 
+            print(f'{self.mode0dcd} does not exist.')
+            return False
+        else:
+            print(f'{self.mode0dcd} exists.')
+            return True
+        
+    def copy_mode0dcd(self, old_folder):
+        old_mode0dcd = path.join(old_folder, self.host, self.type_na, 'input', 'heavyatoms', 'bdna+bdna.nohydrogen.fitavg.dcd') 
         copyfile(old_mode0dcd, self.mode0dcd)
         print(f'cp {old_mode0dcd} {self.mode0dcd}')
-        
-    def build_map(self):
+
+    def set_mda_universe(self):
+        self.u = MDAnalysis.Universe(self.crd, self.crd)
+
+    def set_required_d(self):
+        self.map, self.inverse_map, self.residues_map, self.atomid_map,\
+        self.atomid_map_inverse, self.atomname_map, self.strandid_map,\
+        self.resid_map, self.mass_map = self.__build_map()
+
+    def __build_map(self):
         d1 = dict()  # key: selction, value: cgname
         d2 = dict()  # key: cgname,   value: selection
         d3 = dict()
@@ -115,6 +146,49 @@ class ENMAgent:
             atomid += 1
         return d1, d2, d3, d4, d5, d6, d7, d8, d9
 
+    def get_all_pairs(self, cutoff):
+        result = list()
+        for selection1, cgname1 in self.map.items():
+            atoms = self.u.select_atoms("around {0} ({1})".format(cutoff, selection1))
+            for atom in atoms:
+                selection2 = get_selection(atom)
+                cgname2 = self.map[selection2]
+                if cgname1 == cgname2:
+                    continue
+                result.append(AtomPair(cgname1, cgname2, selection1, selection2))
+        return list(OrderedDict.fromkeys(result))
+        #  return list(set(result))
+
+    def write_make_enm_crd_input(self):
+        inp = path.join(self.charmminp_folder, 'make_enm_crd.inp')
+        
+        na = 'bdna'
+        supplement1 = get_patch(self.seq1, 1)
+        supplement2 = get_patch(self.seq2, 2)
+
+        crd1 = path.join(self.mkcrd_folder, '{0}1.crd'.format(na))
+        inp1 = Script(path.join(self.mkcrd_folder, '{0}1.inp'.format(na)))
+        inp1.write_bomlev()
+        inp1.initialize_rtf_prm(amber=amber)
+        inp1.write_seq(self.seq1, firstter=firstter, lastter=lastter, segid='strand1')
+        if supplement1 is not None:
+            inp1.write_supplement(supplement1)
+        inp1.gen_angle_dihedral()
+        inp1.read_pdb(path.join(self.mkcrd_folder, '{0}1.1.pdb'.format(na)))
+        inp1.write_crd(crd1)
+        inp1.end()
+
+    def make_enm_crd(self):
+        charmm = "/home/yizaochen/opt/charmm/exec/gnu/charmm"
+        inp = path.join(self.charmminp_folder, 'make_enm_crd.inp')
+        dat = path.join(self.charmmdat_folder, 'make_enm_crd.dat')
+        self.__exec_charmm(charmm, inp, dat)
+            
+    def __exec_charmm(self, charmm, f_input, f_output):
+        print("charmm< {0} > {1}".format(f_input, f_output))
+        check_call(charmm, stdin=open(f_input, 'r'), stdout=open(f_output, 'w+'), shell=True)
+
+
     def read_ic_fluct_matrix(self, modeid):
         f_in = path.join(self.mat_folder, 'mode.{0}.npy'.format(modeid))
         return np.load(f_in)
@@ -132,19 +206,6 @@ class ENMAgent:
         f_out = path.join(self.mat_folder, 'mode.{0}.npy'.format(modeid))
         np.save(f_out, mat)
         return mat
-
-    def get_all_pairs(self, cutoff=10):
-        result = list()
-        for selection1, cgname1 in self.map.items():
-            atoms = self.u.select_atoms("around {0} ({1})".format(cutoff, selection1))
-            for atom in atoms:
-                selection2 = get_selection(atom)
-                cgname2 = self.map[selection2]
-                if cgname1 == cgname2:
-                    continue
-                result.append(AtomPair(cgname1, cgname2, selection1, selection2))
-        return list(OrderedDict.fromkeys(result))
-        #  return list(set(result))
 
     def get_ic_fluct(self, modeid):
         try:
