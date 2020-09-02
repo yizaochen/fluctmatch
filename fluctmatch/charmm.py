@@ -134,6 +134,28 @@ class Script:
         else:
             self.f.write('orie sele .not. hydrogen end\n\n')
 
+    def proc_enm_topology_from_allatom(self):
+        self.f.write('define strand1 sele segid strand1 end\n')
+        self.f.write('calc lastindex1 ?nsel + 1\n')
+        self.f.write('define strand2 sele segid strand2 end\n')
+        self.f.write('calc lastindex2 ?nsel + @lastindex1\n\n')
+
+        self.f.write('set i = 1\n')
+        self.f.write('label loop1\n')
+        self.f.write('set newname A@i\n')
+        self.f.write('rename resn NA sele bynu @i end\n')
+        self.f.write('rename atom @newname sele bynu @i end\n')
+        self.f.write('incr i by 1\n')
+        self.f.write('if @i .lt. @lastindex1 then goto loop1\n\n')
+
+        self.f.write('label loop2\n')
+        self.f.write('set newname B@i\n')
+        self.f.write('rename resn NA sele bynu @i end\n')
+        self.f.write('rename atom @newname sele bynu @i end\n')
+        self.f.write('incr i by 1\n')
+        self.f.write('if @i .lt. @lastindex2 then goto loop2\n\n')
+        self.f.write('\n')        
+
     def write_quasi(self, vect=True):
         self.f.write('set nmod ?natom\n')
         self.f.write('calc nmod = @nmod * 3\n\n')

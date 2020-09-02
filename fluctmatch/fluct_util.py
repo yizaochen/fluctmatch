@@ -6,9 +6,9 @@ import datetime
 import time
 from scipy import constants
 import numpy as np
-import enm, rtf, ic_str, charmm_fluct, ic_table, prm
+from fluctmatch import enm, rtf, ic_str, charmm_fluct, ic_table, prm
 
-charmm = '/Users/yizao/c41b1_yz/exec/osx/charmm'
+charmm = '/home/yizaochen/opt/charmm/exec/gnu/charmm'
 scratchfolder = '/scratch/yizaochen' 
 
 T = 310.0 # temperature, 310 K

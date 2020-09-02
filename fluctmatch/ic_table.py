@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from enm import FluctPair
+from fluctmatch.fluctpair import FluctPair
 
 
 class ICTable:

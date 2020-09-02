@@ -8,6 +8,8 @@ import MDAnalysis
 from fluctmatch.miscell import get_patch, check_dir_exist_and_make
 from fluctmatch.charmm import Script
 from fluctmatch.sequence import sequences
+from fluctmatch.fluctpair import FluctPair
+from fluctmatch.atompair import AtomPair
 
 cmm_root = '/home/yizaochen/PycharmProjects/connect_macro_micro'
 d_atomcgtype = {'O1P': 'P', 'P': 'P', 'O2P': 'P', 'O5\'': 'P',
@@ -159,24 +161,31 @@ class ENMAgent:
         return list(OrderedDict.fromkeys(result))
         #  return list(set(result))
 
-    def write_make_enm_crd_input(self):
-        inp = path.join(self.charmminp_folder, 'make_enm_crd.inp')
+    def write_make_enm_crd_input(self, amber=True, firstter=None, lastter=None):
+        rtfprm_folder = '/home/yizaochen/prm_rtf'
+        inp_file = path.join(self.charmminp_folder, 'make_enm_crd.inp')
+        outcrd = path.join(self.input_folder, 'na_enm.crd')
         
         na = 'bdna'
         supplement1 = get_patch(self.seq1, 1)
         supplement2 = get_patch(self.seq2, 2)
 
-        crd1 = path.join(self.mkcrd_folder, '{0}1.crd'.format(na))
-        inp1 = Script(path.join(self.mkcrd_folder, '{0}1.inp'.format(na)))
-        inp1.write_bomlev()
-        inp1.initialize_rtf_prm(amber=amber)
-        inp1.write_seq(self.seq1, firstter=firstter, lastter=lastter, segid='strand1')
-        if supplement1 is not None:
-            inp1.write_supplement(supplement1)
-        inp1.gen_angle_dihedral()
-        inp1.read_pdb(path.join(self.mkcrd_folder, '{0}1.1.pdb'.format(na)))
-        inp1.write_crd(crd1)
-        inp1.end()
+        inp = Script(inp_file)
+        inp.write_bomlev()
+        inp.initialize_rtf_prm(rtfprm_folder=rtfprm_folder, amber=amber)
+
+        inp.write_seq(self.seq1, firstter=firstter, lastter=lastter, segid='strand1')
+        inp.write_supplement(supplement1)
+        inp.write_seq(self.seq2, firstter=firstter, lastter=lastter, segid='strand2')
+        inp.write_supplement(supplement2)
+        inp.gen_angle_dihedral()
+        inp.delete_selection()
+        
+        inp.read_crd(self.crd)
+        inp.proc_enm_topology_from_allatom()
+        inp.write_crd(outcrd)
+
+        inp.end()
 
     def make_enm_crd(self):
         charmm = "/home/yizaochen/opt/charmm/exec/gnu/charmm"
@@ -188,6 +197,10 @@ class ENMAgent:
         print("charmm< {0} > {1}".format(f_input, f_output))
         check_call(charmm, stdin=open(f_input, 'r'), stdout=open(f_output, 'w+'), shell=True)
 
+    def check_enm_crd(self):
+        enmcrd = path.join(self.input_folder, 'na_enm.crd')
+        print(f'vmd -cor {self.crd}')
+        print(f'mol new {enmcrd} type cor')
 
     def read_ic_fluct_matrix(self, modeid):
         f_in = path.join(self.mat_folder, 'mode.{0}.npy'.format(modeid))
@@ -423,61 +436,6 @@ class ENMAgent:
     def get_avg_structure(self):
         d = read_structure(self.crd)
         return d
-
-
-class AtomPair:
-    def __init__(self, name1, name2, selection1, selection2, k=10., b=5.):
-        self.name1 = name1
-        self.name2 = name2
-        self.selection1 = selection1
-        self.selection2 = selection2
-        self.atom1 = None  # MDAnalysis Atom Obejct
-        self.atom2 = None  # MDAnalysis Atom Obejct
-        self.distances = list()
-        self.k = k
-        self.b = b
-        self.pairname = "{0}-{1}".format(self.name1, self.name2)
-
-    def set_atom1(self, atom):
-        self.atom1 = atom
-
-    def set_atom2(self, atom):
-        self.atom2 = atom
-
-    def get_distance(self):
-        return np.linalg.norm(self.atom1.positions[0] - self.atom2.positions[0])
-
-    def append_distances(self):
-        self.distances.append(np.linalg.norm(self.atom1.positions[0] - self.atom2.positions[0]))
-
-    def __repr__(self):
-        return "{0}-{1}".format(self.name1, self.name2)
-
-    def __hash__(self):
-        return hash(self.name1) + hash(self.name2)
-
-    def __eq__(self, other):
-        if self.name1 == other.name1 and self.name2 == other.name2:
-            return True
-        elif self.name1 == other.name2 and self.name2 == other.name1:
-            return True
-        else:
-            return False
-
-
-class FluctPair(AtomPair):
-    def __init__(self, name1, name2, fluct_value):
-        self.name1 = name1
-        self.name2 = name2
-        self.value = fluct_value
-
-
-def check_dir_exist_and_make(file_path):
-    if path.exists(file_path):
-        print("{0} exists".format(file_path))
-    else:
-        print("mkdir {0}".format(file_path))
-        mkdir(file_path)
 
 
 def get_selection(atom):
