@@ -1,5 +1,3 @@
-rootfolder = '/Users/yizao/PycharmProjects/ENM'
-
 class Script:
     def __init__(self, file_name, mode='write', description=None):
         """
@@ -23,7 +21,7 @@ class Script:
         self.f.write('bomlev {0}\n\n'.format(str(bomlev)))
         
     def initialize_variables(self, host, type_na):
-        self.f.write(f'set rootfolder {rootfolder} \n')
+        self.f.write('set rootfolder /home/yizaochen/fluct_diffcutoff \n')
         self.f.write('set host {0} \n'.format(host))
         self.f.write('set typena {0} \n'.format(type_na))
         self.f.write('set nadir @rootfolder/@host/@typena \n')
@@ -32,43 +30,39 @@ class Script:
         self.f.write('set topdir @nadir/rtf_ic_str \n')
         self.f.write('set modeid = 0 \n\n')
         
-    def initialize_variables_nma(self, host, type_na):
-        self.f.write(f'set rootfolder {rootfolder} \n')
+    def initialize_variables_nma(self, host, type_na, cutoff):
+        self.f.write('set rootfolder /home/yizaochen/fluct_diffcutoff \n')
+        self.f.write('set scratchfolder /scratch/yizaochen/ \n')
         self.f.write('set host {0} \n'.format(host))
         self.f.write('set typena {0} \n'.format(type_na))
         self.f.write('set nadir @rootfolder/@host/@typena \n')
         self.f.write('set datadir @nadir/data \n')
         self.f.write('set dcddir  @nadir/mode_traj \n')
         self.f.write('set topdir @nadir/rtf_ic_str \n')
-        self.f.write('set icstr   @topdir/na_enm.str \n')
+        self.f.write('set icstr   @topdir/na_enm_{0:.2f}.str \n'.format(cutoff))
         self.f.write('set psffile @nadir/input/na_enm.psf \n')
         self.f.write('set crdfile @nadir/input/na_enm.crd \n')
-        self.f.write('set prmfile @datadir/na_enm.prm \n')
-        self.f.write('set vibcrd  @datadir/na_enm.vib.crd \n')
-        self.f.write('set avgic   @datadir/average.ic \n')
-        self.f.write('set fluctic @datadir/fluct.ic \n')
-        self.f.write('set vibic   @datadir/na_enm.vib \n\n')
+        self.f.write('set prmfile @scratchfolder/na_enm_{0:.2f}.prm \n'.format(cutoff))
+        self.f.write('set vibcrd  @scratchfolder/na_enm.vib_{0:.2f}.crd \n'.format(cutoff))
+        self.f.write('set avgic   @scratchfolder/average_{0:.2f}.ic \n'.format(cutoff))
+        self.f.write('set fluctic @scratchfolder/fluct_{0:.2f}.ic \n'.format(cutoff))
+        self.f.write('set vibic   @scratchfolder/na_enm_{0:.2f}.vib \n\n'.format(cutoff))
         self.f.write('set fileu  10 \n')
         self.f.write('set temp   310.0 \n\n')
         
-    def initialize_variables_mini(self, host, type_na, f_prm):
-        self.f.write(f'set rootfolder {rootfolder} \n')
-        self.f.write(f'set host {host} \n')
-        self.f.write(f'set typena {type_na} \n')
+    def initialize_variables_mini(self, host, type_na, cutoff):
+        self.f.write('set rootfolder /home/yizaochen/fluct_diffcutoff \n')
+        self.f.write('set host {0} \n'.format(host))
+        self.f.write('set typena {0} \n'.format(type_na))
         self.f.write('set nadir @rootfolder/@host/@typena \n')
         self.f.write('set datadir @nadir/data \n')
         self.f.write('set topdir @nadir/rtf_ic_str \n')
-        self.f.write(f'set prmfile {f_prm} \n')
+        self.f.write(f'set prmfile @nadir/cutoffdata/na_enm_{cutoff:.2f}.prm \n')
         self.f.write('set crdfile @nadir/input/na_enm.crd \n')
         self.f.write('set fileu  10 \n\n')
         
-    def read_rtf(self):
-        self.f.write('open unit 11 read form name @topdir/na_enm.rtf \n')
-        self.f.write('read rtf card unit 11 \n')
-        self.f.write('close unit 11 \n\n')
-        
-    def read_rtf_cutoff(self, cutoff):
-        self.f.write(f'open unit 11 read form name @topdir/na_enm_{cutoff:.2f}.rtf \n')
+    def read_rtf(self, cutoff):
+        self.f.write('open unit 11 read form name @topdir/na_enm_{0:.2f}.rtf \n'.format(cutoff))
         self.f.write('read rtf card unit 11 \n')
         self.f.write('close unit 11 \n\n')
         
@@ -116,18 +110,13 @@ class Script:
         self.f.write('mini sd nstep 100 \n')
         self.f.write('mini abnr nstep 1000000 tolg 0.00001 \n\n')
         
-    def write_crd_mini(self, iterid):
-        self.f.write(f'open write unit 12 card name @nadir/minims/minim_after_fm_{iterid}.crd\n')
+    def write_crd_mini(self, cutoff):
+        self.f.write(f'open write unit 12 card name @nadir/cutoffdata/minim_after_fm_{cutoff:.2f}.crd\n')
         self.f.write('write coor card unit 12\n')
         self.f.write('close unit 12\n\n')
         
-    def write_crd_mini_by_filename(self, crd_out):
-        self.f.write(f'open write unit 12 card name {crd_out}\n')
-        self.f.write('write coor card unit 12\n')
-        self.f.write('close unit 12\n\n')
-        
-    def stream_str(self):
-        self.f.write('stream @topdir/na_enm.str \n\n')
+    def stream_str(self, cutoff):
+        self.f.write('stream @topdir/na_enm_{0:.2f}.str \n\n'.format(cutoff))
         
     def stream_str_nma(self):
         self.f.write('stream @icstr \n\n')
@@ -138,7 +127,7 @@ class Script:
         self.f.write('* \n\n')
         self.f.write('close unit @fileu \n\n')
         
-    def nma(self, out_start_end_mode=None):
+    def nma(self):
         self.f.write('calc nmode   ?natom * 3 \n\n')
         self.f.write('set nmodes   @nmode \n')
         self.f.write('set type     temp \n')
@@ -153,12 +142,7 @@ class Script:
         self.f.write('    ic write unit @fluctu resid \n')
         self.f.write('    * Internal coordinate fluctuation \n')
         self.f.write('    * \n')
-        if out_start_end_mode is None:
-            self.f.write('    write normal card mode 1 thru @nmodes unit @vibu \n')
-        else:
-            start_mode = out_start_end_mode[0]
-            end_mode = out_start_end_mode[1] 
-            self.f.write(f'    write normal card mode {start_mode} thru {end_mode} unit @vibu \n')
+        self.f.write('    write normal card mode 1 thru @nmodes unit @vibu \n')
         self.f.write('end \n\n')
         
     def read_traj(self):
@@ -174,13 +158,13 @@ class Script:
         if distance_average:
             self.f.write('ic dynam avg firstu 21 nunit 1 begin 1 \n\n')
         
-    def write_icfluct(self):    
-        self.f.write('open unit 30 write card name @rootfolder/@host/@typena/ic/mode.@modeid.ic \n')
+    def write_icfluct(self, cutoff):    
+        self.f.write('open unit 30 write card name @rootfolder/@host/@typena/ic/mode.@modeid.{0:.2f}.ic \n'.format(cutoff))
         self.f.write('write ic card unit 30 \n')
         self.f.write('close unit 30 \n\n')
         
-    def write_icavg(self):    
-        self.f.write('open unit 30 write card name @rootfolder/@host/@typena/ic/mode.@modeid.avg.ic \n')
+    def write_icavg(self, cutoff):    
+        self.f.write('open unit 30 write card name @rootfolder/@host/@typena/ic/mode.@modeid.avg.{0:.2f}.ic \n'.format(cutoff))
         self.f.write('write ic card unit 30 \n')
         self.f.write('close unit 30 \n\n')
     

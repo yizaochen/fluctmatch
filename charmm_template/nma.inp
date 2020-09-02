@@ -1,0 +1,105 @@
+* Normal mode analysis of structure for parameter fitting. The original CHARMM
+* script was written by Prof. Jhih-Wei Chu
+*
+
+bomlev -5
+
+! Directories
+set host pnas_amber_clean
+set typena arna+arna
+set nadir ./@host/@typena
+set datadir @nadir/data
+set dcddir  @nadir/mode_traj
+
+! Filenames
+set rtffile @nadir/rtf_ic_str/na_enm.rtf 
+set psffile @nadir/input/na_enm.psf
+set crdfile @nadir/input/na_enm.crd
+set icstr   @nadir/rtf_ic_str/na_enm.str
+set prmfile @datadir/na_enm.prm 
+set avgfn   @datadir/na.avg.ic
+set fluctfn @datadir/na.fluct.ic
+set dcdfn   mode.0.dcd
+set ndcd    1
+set vibcrd  @datadir/na_enm.vib.crd
+set avgic   @datadir/average.ic
+set fluctic @datadir/fluct.ic
+set vibic   @datadir/na_enm.vib
+
+! Additional data
+set fileu  10
+set temp   310.0
+
+! Load ENM topology file.
+open read unit @fileu form name @rtffile
+read rtf  unit @fileu card
+close unit @fileu
+
+! Load PRM
+open read unit @fileu form name @prmfile
+read para unit @fileu card
+close unit @fileu
+
+read sequ card
+*
+ 1
+NA
+generate DNA setup
+
+open read unit @fileu card name @crdfile
+read coor unit @fileu ignore
+coor copy comp
+close unit @fileu
+
+
+! do just bond energy
+skip all excl bond
+! do not create nonbond list and a new hbond list and do not update image
+update inbfrq 0 1hbfrq 0 imgfrq 0
+
+ener
+
+! Minimize structure using steepest descent and ABNR
+mini sd nstep 100
+mini abnr nstep 2000
+
+coor orie rms mass
+scalar wmain copy mass
+
+ioformat extended
+open write unit @fileu card name @vibcrd
+write coor unit @fileu card
+
+stream @icstr
+
+ic fill
+open write unit @fileu card name @avgic
+write ic   unit @fileu card resid
+* Internal coordinate averages
+*
+
+close unit @fileu
+
+calc nmode   ?natom * 3
+
+set nmodes   @nmode
+set type     temp
+set fluctu   20
+set vibu     22
+
+open write unit @fluctu card name @fluctic
+open write unit @vibu   card name @vibic
+
+! Perform normal mode analysis at desired temperature for vibrational normal
+! modes
+vibran nmode @nmodes
+    diag fini
+    fluc ic @type @temp tfre 0.0 mode 7 thru @nmodes
+    ic save
+    ic write unit @fluctu resid
+    * Internal coordinate fluctuation
+    *
+    write normal card mode 1 thru @nmodes unit @vibu
+end
+
+stop

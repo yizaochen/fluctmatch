@@ -1,0 +1,57 @@
+* Obtain a minimized structure by using prm after fluctuation-matching 
+* script was written by Yi-Tsao Chen
+*
+
+bomlev -5
+
+! Directories
+set host pnas_amber_clean
+set typena arna+arna
+set nadir ./@host/@typena
+set datadir @nadir/data
+
+! Filenames
+set rtffile @nadir/rtf_ic_str/na_enm.rtf 
+set crdfile @nadir/input/na_enm.crd
+set prmfile @datadir/na_enm.prm 
+
+! Additional data
+set fileu  10
+set temp    310.0
+
+! Load ENM topology file.
+open read unit @fileu form name @rtffile
+read rtf  unit @fileu card
+close unit @fileu
+
+! Load PRM
+open read unit @fileu form name @prmfile
+read para unit @fileu card
+close unit @fileu
+
+read sequ card
+*
+ 1
+NA
+generate DNA setup
+
+open read unit @fileu card name @crdfile
+read coor unit @fileu ignore
+coor copy comp
+close unit @fileu
+
+! do just bond energy
+skip all excl bond
+! do not create nonbond list and a new hbond list and do not update image
+update inbfrq 0 1hbfrq 0 imgfrq 0
+
+! Minimization
+mini sd nstep 100
+mini abnr nstep 1000000 tolg 0.00001
+
+! Write structure
+open write unit 12 card name @datadir/minim_after_fm.crd
+write coor card unit 12
+close unit 12
+
+stop

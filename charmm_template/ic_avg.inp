@@ -1,0 +1,42 @@
+* Author: Yi-Tsao Chen
+* 
+
+bomlev -2
+
+! Directories
+set host pnas
+set typena arna+arna
+set nadir ./@host/@typena
+set datadir @nadir/data
+set dcddir  @nadir/mode_traj
+set topdir @nadir/rtf_ic_str
+
+open unit 11 read form name @topdir/na_enm.rtf
+read rtf card unit 11
+close unit 11
+
+
+read sequ card
+*
+ 1
+NA
+generate DNA setup
+
+open read unit 12 card name @nadir/input/na_enm.crd
+read coor unit 12 ignore
+close unit 12
+
+stream @topdir/na_enm.str
+
+set modeid = 0
+open unform read unit 21 name @dcddir/mode.@modeid.dcd
+traj firstu 21 nunit 1 skip 1
+
+ic fill
+ic dynam aver firstu 21 nunit 1 begin 1
+!print ic
+
+open unit 30 write card name ./@host/@typena/ic/mode.@modeid.avg.ic
+write ic card unit 30
+close unit 30
+stop
