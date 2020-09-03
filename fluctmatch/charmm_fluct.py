@@ -20,8 +20,8 @@ class Script:
     def write_bomlev(self, bomlev=-2):
         self.f.write('bomlev {0}\n\n'.format(str(bomlev)))
         
-    def initialize_variables(self, host, type_na):
-        self.f.write('set rootfolder /home/yizaochen/fluct_diffcutoff \n')
+    def initialize_variables(self, rootfolder, host, type_na):
+        self.f.write(f'set rootfolder {rootfolder} \n')
         self.f.write('set host {0} \n'.format(host))
         self.f.write('set typena {0} \n'.format(type_na))
         self.f.write('set nadir @rootfolder/@host/@typena \n')
@@ -30,9 +30,9 @@ class Script:
         self.f.write('set topdir @nadir/rtf_ic_str \n')
         self.f.write('set modeid = 0 \n\n')
         
-    def initialize_variables_nma(self, host, type_na, cutoff):
-        self.f.write('set rootfolder /home/yizaochen/fluct_diffcutoff \n')
-        self.f.write('set scratchfolder /scratch/yizaochen/ \n')
+    def initialize_variables_nma(self, rootfolder, scratchfolder, host, type_na, cutoff):
+        self.f.write(f'set rootfolder {rootfolder} \n')
+        self.f.write(f'set scratchfolder {scratchfolder} \n')
         self.f.write('set host {0} \n'.format(host))
         self.f.write('set typena {0} \n'.format(type_na))
         self.f.write('set nadir @rootfolder/@host/@typena \n')
@@ -50,8 +50,8 @@ class Script:
         self.f.write('set fileu  10 \n')
         self.f.write('set temp   310.0 \n\n')
         
-    def initialize_variables_mini(self, host, type_na, cutoff):
-        self.f.write('set rootfolder /home/yizaochen/fluct_diffcutoff \n')
+    def initialize_variables_mini(self, rootfolder, host, type_na, cutoff):
+        self.f.write(f'set rootfolder {rootfolder} \n')
         self.f.write('set host {0} \n'.format(host))
         self.f.write('set typena {0} \n'.format(type_na))
         self.f.write('set nadir @rootfolder/@host/@typena \n')

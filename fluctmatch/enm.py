@@ -36,6 +36,7 @@ class ENMAgent:
         self.rtficstr_folder = path.join(self.na_folder, 'rtf_ic_str')
         self.datafolder = path.join(self.na_folder, 'data')
         self.backupfolder = path.join(self.datafolder, 'backup')
+        self.scratchfolder = path.join(self.na_folder, 'scratch')
         self.initialize_folders()
         
         self.seq1 = sequences[self.host][self.type_na]['guide']
@@ -64,7 +65,7 @@ class ENMAgent:
         for folder in [self.host_folder, self.na_folder, self.input_folder,
                        self.charmminp_folder, self.charmmdat_folder,
                        self.mode_traj_folder, self.ic_folder, self.mat_folder,
-                       self.rtficstr_folder, self.datafolder, self.backupfolder]:
+                       self.rtficstr_folder, self.datafolder, self.backupfolder, self.scratchfolder]:
             check_dir_exist_and_make(folder)
 
     def check_avg_crd(self):

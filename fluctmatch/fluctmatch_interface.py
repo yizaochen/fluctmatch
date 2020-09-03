@@ -21,10 +21,10 @@ def exec_charmm(charmm, f_input, f_output):
     check_call(charmm, stdin=open(f_input, 'r'), stdout=open(f_output, 'w+'), shell=True)
 
 
-def write_ic_fluct_inp(f_out, host, type_na, cutoff):
+def write_ic_fluct_inp(f_out, host, type_na, cutoff, rootfolder):
     inp = charmm_fluct.Script(f_out)
     inp.write_bomlev()
-    inp.initialize_variables(host, type_na)
+    inp.initialize_variables(rootfolder, host, type_na)
     inp.read_rtf(cutoff)
     inp.read_seq()
     inp.read_crd()
@@ -34,10 +34,10 @@ def write_ic_fluct_inp(f_out, host, type_na, cutoff):
     inp.write_icfluct(cutoff)
     inp.end()
     
-def write_ic_avg_inp(f_out, host, type_na, cutoff, distance_average=False):
+def write_ic_avg_inp(f_out, host, type_na, cutoff, rootfolder, distance_average=False):
     inp = charmm_fluct.Script(f_out)
     inp.write_bomlev()
-    inp.initialize_variables(host, type_na)
+    inp.initialize_variables(rootfolder, host, type_na)
     inp.read_rtf(cutoff)
     inp.read_seq()
     inp.read_crd()
@@ -47,10 +47,10 @@ def write_ic_avg_inp(f_out, host, type_na, cutoff, distance_average=False):
     inp.write_icavg(cutoff)
     inp.end()
     
-def write_nmainit_inp(f_out, host, type_na, cutoff):
+def write_nmainit_inp(f_out, host, type_na, cutoff, rootfolder, scratchfolder):
     inp = charmm_fluct.Script(f_out)
     inp.write_bomlev()
-    inp.initialize_variables_nma(host, type_na, cutoff)
+    inp.initialize_variables_nma(rootfolder, scratchfolder, host, type_na, cutoff)
     inp.read_rtf(cutoff)
     inp.read_prm()
     inp.read_seq()
@@ -61,20 +61,8 @@ def write_nmainit_inp(f_out, host, type_na, cutoff):
     inp.nma()
     inp.end()
     
-def write_nma_inp(f_out, host, type_na, cutoff):
-    inp = charmm_fluct.Script(f_out)
-    inp.write_bomlev()
-    inp.initialize_variables_nma(host, type_na, cutoff)
-    inp.read_rtf(cutoff)
-    inp.read_prm()
-    inp.read_seq()
-    inp.read_crd_nma()
-    inp.minimization()
-    inp.stream_str_nma()
-    inp.nma()
-    inp.end()
     
-def fluct_match(host, type_na, start, end, cutoff, icfluct_0, icavg_0, scratchfolder):
+def fluct_match(host, type_na, start, end, cutoff, icfluct_0, icavg_0, scratchfolder, charmm, rootfolder):
     # Backup Folder
     backupfolder = path.join(scratchfolder, 'backup')
     check_dir_exist_and_make(backupfolder)
@@ -107,8 +95,8 @@ def fluct_match(host, type_na, start, end, cutoff, icfluct_0, icavg_0, scratchfo
         nma_inp = path.join(scratchfolder, 'nma.inp')
         nma_dat = path.join(scratchfolder, 'nma.dat')
         if i == 0:
-            write_nmainit_inp(nma_inp, host, type_na, cutoff)
-        exec_charmm(nma_inp, nma_dat)
+            write_nmainit_inp(nma_inp, host, type_na, cutoff, rootfolder, scratchfolder)
+        exec_charmm(charmm, nma_inp, nma_dat)
         time.sleep(2)
         
         # Read icavg, icfluct
@@ -139,7 +127,7 @@ def fluct_match(host, type_na, start, end, cutoff, icfluct_0, icavg_0, scratchfo
         prm_agent.write_prm(prmfile)
 
 
-def main(rootfolder, host, type_na, cutoff, start, end):
+def main(rootfolder, host, type_na, cutoff, start, end, charmm):
     # Initialize 
     agent = enm.ENMAgent(rootfolder, host, type_na)
     nadir = agent.na_folder
@@ -152,8 +140,8 @@ def main(rootfolder, host, type_na, cutoff, start, end):
     # IC fluct
     icfluct_inp = path.join(charmminpfolder, 'ic_fluct_{0:.2f}.inp'.format(cutoff))
     icfluct_dat = path.join(charmmdatfolder, 'ic_fluct_{0:.2f}.dat'.format(cutoff))
-    write_ic_fluct_inp(icfluct_inp, host, type_na, cutoff)
-    exec_charmm(icfluct_inp, icfluct_dat)
+    write_ic_fluct_inp(icfluct_inp, host, type_na, cutoff, rootfolder)
+    exec_charmm(charmm, icfluct_inp, icfluct_dat)
     mode0ic = path.join(icfolder, 'mode.0.{0:.2f}.ic'.format(cutoff))
     nafluctic = path.join(datafolder, 'na.fluct.{0:.2f}.ic'.format(cutoff))
     with open(mode0ic, 'r') as f:
@@ -166,8 +154,8 @@ def main(rootfolder, host, type_na, cutoff, start, end):
     # IC Avg
     icavg_inp = path.join(charmminpfolder, 'ic_avg_{0:.2f}.inp'.format(cutoff))
     icavg_dat = path.join(charmmdatfolder, 'ic_avg_{0:.2f}.dat'.format(cutoff))
-    write_ic_avg_inp(icavg_inp, host, type_na, cutoff, distance_average=False) # Important! Check Fix b0
-    exec_charmm(icavg_inp, icavg_dat)
+    write_ic_avg_inp(icavg_inp, host, type_na, cutoff, rootfolder, distance_average=False) # Important! Check Fix b0
+    exec_charmm(charmm, icavg_inp, icavg_dat)
     mode0avgic = path.join(icfolder, 'mode.0.avg.{0:.2f}.ic'.format(cutoff))
     naavgic = path.join(datafolder, 'na.avg.{0:.2f}.ic'.format(cutoff))
     with open(mode0avgic, 'r') as f:
@@ -188,11 +176,11 @@ def main(rootfolder, host, type_na, cutoff, start, end):
     # NMA Initialize
     nma_init_inp = path.join(scratchfolder, 'nmainit.inp')
     nma_init_dat = path.join(scratchfolder, 'nmainit.dat')
-    write_nmainit_inp(nma_init_inp, host, type_na, cutoff)
-    exec_charmm(nma_init_inp, nma_init_dat)
+    write_nmainit_inp(nma_init_inp, host, type_na, cutoff, rootfolder, scratchfolder)
+    exec_charmm(charmm, nma_init_inp, nma_init_dat)
     
     # Fluctuation-Matching
-    fluct_match(host, type_na, start, end, cutoff, icfluct_0, icavg_0, scratchfolder)
+    fluct_match(host, type_na, start, end, cutoff, icfluct_0, icavg_0, scratchfolder, charmm, rootfolder)
     
     # Copy Back to the folder
     cutoffdatafolder = path.join(nadir, 'cutoffdata')
