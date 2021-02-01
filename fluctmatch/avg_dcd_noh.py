@@ -1,13 +1,12 @@
 from os import path
 from shutil import copyfile
 from subprocess import check_call
-from charmm import Script
-from miscell import check_dir_exist_and_make, get_patch
-from sequence import sequences
-import PDB
+from fluctmatch.charmm import Script
+from fluctmatch.miscell import check_dir_exist_and_make, get_patch
+from fluctmatch.sequence import sequences
+from fluctmatch import PDB
 
-charmm = '/home/yizaochen/opt/charmm/exec/gnu/charmm'
-
+charmm = '/home/yizaochen/opt/c43b1/charmm'
 
 class AvgcrddcdAgent:
     def __init__(self, host, type_na, rootfolder):
@@ -37,7 +36,7 @@ class AvgcrddcdAgent:
             na = 'arna'
             supplement1 = None
             supplement2 = None 
-        elif self.type_na == 'bdna+bdna':
+        else:
             na = 'bdna'
             supplement1 = get_patch(self.seq1, 1)
             supplement2 = get_patch(self.seq2, 2)
@@ -85,7 +84,7 @@ class AvgcrddcdAgent:
         if self.type_na == 'arna+arna':
             supplement1 = None
             supplement2 = None 
-        elif self.type_na == 'bdna+bdna':
+        else:
             supplement1 = get_patch(self.seq1, 1)
             supplement2 = get_patch(self.seq2, 2)
 
@@ -112,7 +111,7 @@ class AvgcrddcdAgent:
         if self.type_na == 'arna+arna':
             supplement1 = None
             supplement2 = None 
-        elif self.type_na == 'bdna+bdna':
+        else:
             supplement1 = get_patch(self.seq1, 1)
             supplement2 = get_patch(self.seq2, 2)
 
@@ -143,7 +142,7 @@ class AvgcrddcdAgent:
         if self.type_na == 'arna+arna':
             supplement1 = None
             supplement2 = None 
-        elif self.type_na == 'bdna+bdna':
+        else:
             supplement1 = get_patch(self.seq1, 1)
             supplement2 = get_patch(self.seq2, 2)
 
@@ -175,7 +174,7 @@ class AvgcrddcdAgent:
         if self.type_na == 'arna+arna':
             supplement1 = None
             supplement2 = None 
-        elif self.type_na == 'bdna+bdna':
+        else:
             supplement1 = get_patch(self.seq1, 1)
             supplement2 = get_patch(self.seq2, 2)
 
@@ -209,7 +208,7 @@ class AvgcrddcdAgent:
         if self.type_na == 'arna+arna':
             supplement1 = None
             supplement2 = None 
-        elif self.type_na == 'bdna+bdna':
+        else:
             supplement1 = get_patch(self.seq1, 1)
             supplement2 = get_patch(self.seq2, 2)
 
@@ -255,7 +254,7 @@ class AvgcrddcdAgent:
     def make_crd(self):
         if self.type_na == 'arna+arna':
             na = 'arna'
-        elif self.type_na == 'bdna+bdna':
+        else:
             na = 'bdna'
 
         inp1 = path.join(self.mkcrd_folder, '{0}1.inp'.format(na))

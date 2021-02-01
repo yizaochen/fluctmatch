@@ -44,8 +44,8 @@ class ENMAgent:
 
         self.enmprm = path.join(self.datafolder, 'na_enm.prm')
         self.mode0dcd = path.join(self.mode_traj_folder, 'mode.0.dcd')
-        self.crd = path.join(self.input_folder,
-                             '{0}.nohydrogen.avg.crd'.format(self.type_na))
+        #self.crd = path.join(self.input_folder, '{0}.nohydrogen.avg.crd'.format(self.type_na))
+        self.crd = path.join(self.input_folder, '{0}.nohydrogen.crd'.format(self.type_na))
 
         self.u = None
         self.map = None

@@ -1,5 +1,5 @@
 import numpy as np
-import atom
+from fluctmatch import atom
 
 class PDBReader:
     """
