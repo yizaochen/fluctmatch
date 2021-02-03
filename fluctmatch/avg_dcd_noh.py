@@ -1,12 +1,10 @@
 from os import path
 from shutil import copyfile
 from subprocess import check_call
-from fluctmatch.charmm import Script
+from fluctmatch.charmm import Script, exec_charmm
 from fluctmatch.miscell import check_dir_exist_and_make, get_patch
 from fluctmatch.sequence import sequences
 from fluctmatch import PDB
-
-charmm = '/home/yizaochen/opt/c43b1/charmm'
 
 class AvgcrddcdAgent:
     def __init__(self, host, type_na, rootfolder):
@@ -287,12 +285,3 @@ class AvgcrddcdAgent:
         writer.write_pdb()
         print(f'Reset {pdb_name} resid by offset {offset}!')
         print(f'Check by...\nvim {pdb_name}')
-
-
-def exec_charmm(f_input, f_output):
-    print("charmm< {0} > {1}".format(f_input, f_output))
-    check_call(charmm, stdin=open(f_input, 'r'), stdout=open(f_output, 'w+'), shell=True)
-
-
-
-

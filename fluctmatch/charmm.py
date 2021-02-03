@@ -1,6 +1,12 @@
+from subprocess import check_call
 d_restype = {'nucleic acid': {'A': 'ADE', 'T': 'THY', 'C': 'CYT', 'G': 'GUA', 'U': 'URA'},
              'protein': {}}
 
+charmmexec = '/home/yizaochen/opt/c43b1/charmm'
+
+def exec_charmm(f_input, f_output):
+    print("charmm< {0} > {1}".format(f_input, f_output))
+    check_call(charmmexec, stdin=open(f_input, 'r'), stdout=open(f_output, 'w+'), shell=True)
 
 class Script:
     def __init__(self, file_name, mode='write', description=None):

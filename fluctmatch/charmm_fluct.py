@@ -20,41 +20,44 @@ class Script:
     def write_bomlev(self, bomlev=-2):
         self.f.write('bomlev {0}\n\n'.format(str(bomlev)))
         
-    def initialize_variables(self, rootfolder, host, type_na):
+    def initialize_variables(self, rootfolder, host, type_na, time_label):
         self.f.write(f'set rootfolder {rootfolder} \n')
-        self.f.write('set host {0} \n'.format(host))
-        self.f.write('set typena {0} \n'.format(type_na))
-        self.f.write('set nadir @rootfolder/@host/@typena \n')
+        self.f.write(f'set host {host} \n')
+        self.f.write(f'set typena {type_na} \n')
+        self.f.write(f'set timelabel {time_label} \n')
+        self.f.write('set nadir @rootfolder/@host/@typena/@timelabel \n')
         self.f.write('set datadir @nadir/data \n')
-        self.f.write('set dcddir  @nadir/mode_traj \n')
+        self.f.write('set dcddir  @nadir/input \n')
         self.f.write('set topdir @nadir/rtf_ic_str \n')
         self.f.write('set modeid = 0 \n\n')
         
-    def initialize_variables_nma(self, rootfolder, scratchfolder, host, type_na, cutoff):
+    def initialize_variables_nma(self, rootfolder, scratchfolder, host, type_na, time_label, cutoff):
         self.f.write(f'set rootfolder {rootfolder} \n')
         self.f.write(f'set scratchfolder {scratchfolder} \n')
-        self.f.write('set host {0} \n'.format(host))
-        self.f.write('set typena {0} \n'.format(type_na))
-        self.f.write('set nadir @rootfolder/@host/@typena \n')
+        self.f.write(f'set host {host} \n')
+        self.f.write(f'set typena {type_na} \n')
+        self.f.write(f'set timelabel {time_label} \n')
+        self.f.write('set nadir @rootfolder/@host/@typena/@timelabel \n')
         self.f.write('set datadir @nadir/data \n')
-        self.f.write('set dcddir  @nadir/mode_traj \n')
+        self.f.write('set dcddir  @nadir/input \n')
         self.f.write('set topdir @nadir/rtf_ic_str \n')
-        self.f.write('set icstr   @topdir/na_enm_{0:.2f}.str \n'.format(cutoff))
+        self.f.write(f'set icstr   @topdir/na_enm_{cutoff:.2f}.str \n')
         self.f.write('set psffile @nadir/input/na_enm.psf \n')
         self.f.write('set crdfile @nadir/input/na_enm.crd \n')
-        self.f.write('set prmfile @scratchfolder/na_enm_{0:.2f}.prm \n'.format(cutoff))
-        self.f.write('set vibcrd  @scratchfolder/na_enm.vib_{0:.2f}.crd \n'.format(cutoff))
-        self.f.write('set avgic   @scratchfolder/average_{0:.2f}.ic \n'.format(cutoff))
-        self.f.write('set fluctic @scratchfolder/fluct_{0:.2f}.ic \n'.format(cutoff))
-        self.f.write('set vibic   @scratchfolder/na_enm_{0:.2f}.vib \n\n'.format(cutoff))
+        self.f.write(f'set prmfile @scratchfolder/na_enm_{cutoff:.2f}.prm \n')
+        self.f.write(f'set vibcrd  @scratchfolder/na_enm.vib_{cutoff:.2f}.crd \n')
+        self.f.write(f'set avgic   @scratchfolder/average_{cutoff:.2f}.ic \n')
+        self.f.write(f'set fluctic @scratchfolder/fluct_{cutoff:.2f}.ic \n')
+        self.f.write(f'set vibic   @scratchfolder/na_enm_{cutoff:.2f}.vib \n\n')
         self.f.write('set fileu  10 \n')
         self.f.write('set temp   310.0 \n\n')
         
-    def initialize_variables_mini(self, rootfolder, host, type_na, cutoff):
+    def initialize_variables_mini(self, rootfolder, host, type_na, time_label, cutoff):
         self.f.write(f'set rootfolder {rootfolder} \n')
-        self.f.write('set host {0} \n'.format(host))
-        self.f.write('set typena {0} \n'.format(type_na))
-        self.f.write('set nadir @rootfolder/@host/@typena \n')
+        self.f.write(f'set host {host} \n')
+        self.f.write(f'set typena {type_na} \n')
+        self.f.write(f'set timelabel {time_label} \n')
+        self.f.write('set nadir @rootfolder/@host/@typena/@timelabel \n')
         self.f.write('set datadir @nadir/data \n')
         self.f.write('set topdir @nadir/rtf_ic_str \n')
         self.f.write(f'set prmfile @nadir/cutoffdata/na_enm_{cutoff:.2f}.prm \n')
@@ -146,7 +149,7 @@ class Script:
         self.f.write('end \n\n')
         
     def read_traj(self):
-        self.f.write('open unform read unit 21 name @dcddir/mode.@modeid.dcd \n')
+        self.f.write('open unform read unit 21 name @dcddir/@timelabel.nohydrogen.dcd \n')
         self.f.write('traj firstu 21 nunit 1 skip 1 \n\n')
      
     def icfluct(self):
@@ -159,12 +162,12 @@ class Script:
             self.f.write('ic dynam avg firstu 21 nunit 1 begin 1 \n\n')
         
     def write_icfluct(self, cutoff):    
-        self.f.write('open unit 30 write card name @rootfolder/@host/@typena/ic/mode.@modeid.{0:.2f}.ic \n'.format(cutoff))
+        self.f.write(f'open unit 30 write card name @nadir/ic/mode.@modeid.{cutoff:.2f}.ic \n')
         self.f.write('write ic card unit 30 \n')
         self.f.write('close unit 30 \n\n')
         
     def write_icavg(self, cutoff):    
-        self.f.write('open unit 30 write card name @rootfolder/@host/@typena/ic/mode.@modeid.avg.{0:.2f}.ic \n'.format(cutoff))
+        self.f.write(f'open unit 30 write card name @nadir/ic/mode.@modeid.avg.{cutoff:.2f}.ic \n')
         self.f.write('write ic card unit 30 \n')
         self.f.write('close unit 30 \n\n')
     

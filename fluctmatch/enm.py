@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import MDAnalysis
 from fluctmatch.miscell import get_patch, check_dir_exist_and_make
-from fluctmatch.charmm import Script
+from fluctmatch.charmm import Script, exec_charmm
 from fluctmatch.sequence import sequences
 from fluctmatch.fluctpair import FluctPair
 from fluctmatch.atompair import AtomPair
@@ -167,7 +167,6 @@ class ENMAgent:
         inp_file = path.join(self.charmminp_folder, 'make_enm_crd.inp')
         outcrd = path.join(self.input_folder, 'na_enm.crd')
         
-        na = 'bdna'
         supplement1 = get_patch(self.seq1, 1)
         supplement2 = get_patch(self.seq2, 2)
 
@@ -189,14 +188,9 @@ class ENMAgent:
         inp.end()
 
     def make_enm_crd(self):
-        charmm = "/home/yizaochen/opt/charmm/exec/gnu/charmm"
         inp = path.join(self.charmminp_folder, 'make_enm_crd.inp')
         dat = path.join(self.charmmdat_folder, 'make_enm_crd.dat')
-        self.__exec_charmm(charmm, inp, dat)
-            
-    def __exec_charmm(self, charmm, f_input, f_output):
-        print("charmm< {0} > {1}".format(f_input, f_output))
-        check_call(charmm, stdin=open(f_input, 'r'), stdout=open(f_output, 'w+'), shell=True)
+        exec_charmm(inp, dat)
 
     def check_enm_crd(self):
         enmcrd = path.join(self.input_folder, 'na_enm.crd')
