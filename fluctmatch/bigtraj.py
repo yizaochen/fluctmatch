@@ -141,6 +141,12 @@ class BigTrajAgent(AvgcrddcdAgent):
         cmd = f'scp {old_f} yizaochen@multiscale:{new_f}'
         print(cmd)
 
+    def update_to_multiphysics(self):
+        old_f = path.join(self.bigtraj_folder, f'{self.host}.zip')
+        new_f = path.join(self.multiscale_bigtraj_folder, f'{self.host}.zip')
+        cmd = f'scp {old_f} yizaochen@multiphysics:{new_f}'
+        print(cmd)
+
 
 class BigTrajOnServer(BigTrajAgent):
     def __init__(self, host, type_na, bigtraj_folder):
@@ -332,7 +338,7 @@ class SmallTrajAgent(ENMAgent):
     def make_python_fluct_main(self, start, end):
         lines = ['from fluctmatch import fluctmatch_interface\n',
                  f'bigtraj_folder = \'{self.rootfolder}\'',
-                 f'charmm = \'/home/yizaochen/c39b1_yizao/exec/gnu/charmm\'',
+                 f'charmm = \'/home/yizaochen/opt/c41b1_yz/exec/charmm\'',
                  f'host = \'{self.host}\'',
                  f'type_na = \'{self.type_na}\'',
                  f'time_label = \'{self.time_label}\'',
