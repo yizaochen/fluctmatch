@@ -164,15 +164,16 @@ class BigTrajOnServer(BigTrajAgent):
         self.d_smallagents = self.get_all_small_agents()
 
     def unarchive_folder(self):
+        check_dir_exist_and_make(self.host_folder)
         with zipfile.ZipFile(self.f_zip, 'r') as zip_ref:
-            zip_ref.extractall(self.bigtraj_folder)
-        info = f'Unzip {self.f_zip} into {self.bigtraj_folder}'
+            zip_ref.extractall(self.host_folder)
+        info = f'Unzip {self.f_zip} into {self.host_folder}'
         print(info)
 
     def generate_python_files(self, start, end):
          for time1, time2 in self.time_list:
             agent = self.d_smallagents[(time1,time2)]
-            agent.make_python_fluct_main(self, start, end)
+            agent.make_python_fluct_main(start, end)
 
     def generate_qsub_scripts(self, path_to_pythonexec):
         for time1, time2 in self.time_list:
