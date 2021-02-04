@@ -1,5 +1,6 @@
 from os import path, system, remove
 from shutil import copyfile, make_archive
+import zipfile
 from fluctmatch.avg_dcd_noh import AvgcrddcdAgent, exec_charmm
 from fluctmatch.miscell import check_dir_exist_and_make, get_patch
 from fluctmatch.sequence import sequences
@@ -7,6 +8,7 @@ from fluctmatch.charmm import Script
 from fluctmatch.enm import ENMAgent
 from fluctmatch.rtf import RTF
 from fluctmatch.ic_str import ICSTR
+from fluctmatch.fluct_pbs import PBSAgent
 
 class BigTrajAgent(AvgcrddcdAgent):
 
@@ -139,10 +141,49 @@ class BigTrajAgent(AvgcrddcdAgent):
         cmd = f'scp {old_f} yizaochen@multiscale:{new_f}'
         print(cmd)
 
+
+class BigTrajOnServer(BigTrajAgent):
+    def __init__(self, host, type_na, bigtraj_folder):
+        self.host = host
+        self.type_na = type_na
+        self.bigtraj_folder = bigtraj_folder
+
+        self.host_folder = path.join(bigtraj_folder, host)
+        self.na_folder = path.join(self.host_folder, type_na)
+        
+        self.zipfolder = path.join(self.bigtraj_folder, 'zipfiles')
+        self.f_zip = path.join(self.zipfolder, f'{host}.zip')
+
+        self.time_list, self.mdnum_list = self.get_time_list()
+        self.d_smallagents = self.get_all_small_agents()
+
+    def unarchive_folder(self):
+        with zipfile.ZipFile(self.f_zip, 'r') as zip_ref:
+            zip_ref.extractall(self.bigtraj_folder)
+        info = f'Unzip {self.f_zip} into {self.bigtraj_folder}'
+        print(info)
+
+    def generate_python_files(self, start, end):
+         for time1, time2 in self.time_list:
+            agent = self.d_smallagents[(time1,time2)]
+            agent.make_python_fluct_main(self, start, end)
+
+    def generate_qsub_scripts(self, path_to_pythonexec):
+        for time1, time2 in self.time_list:
+            agent = self.d_smallagents[(time1,time2)]
+            agent.make_qsub_file(path_to_pythonexec)
+
+    def submit_all_qsubs(self):
+        for time1, time2 in self.time_list:
+            agent = self.d_smallagents[(time1,time2)]
+            agent.submit_qsub()    
+
+
 class SmallTrajAgent(ENMAgent):
     scratchroot = '/scratch'
 
     def __init__(self, root, host, type_na, time_label):
+        self.rootfolder = root
         self.host = host
         self.type_na = type_na
         self.time_label = time_label
@@ -159,6 +200,9 @@ class SmallTrajAgent(ENMAgent):
         self.rtficstr_folder = path.join(self.time_folder, 'rtf_ic_str')
         self.datafolder = path.join(self.time_folder, 'data')
         self.backupfolder = path.join(self.datafolder, 'backup')
+        self.qsub_folder = path.join(self.time_folder, 'qsub_scripts')
+        self.qsub_file = path.join(self.qsub_folder, 'fluct_main.qsub')
+        self.pyfile = path.join(self.time_folder, 'fluct_main.py')
         #self.initialize_folders()
 
         # Scratch folder
@@ -284,3 +328,39 @@ class SmallTrajAgent(ENMAgent):
         f_inp = path.join(self.charmminp_folder, 'write_no_h_dcd.inp')
         f_dat = path.join(self.charmmdat_folder, 'write_no_h_dcd.dat')
         exec_charmm(f_inp, f_dat)
+
+    def make_python_fluct_main(self, start, end):
+        lines = ['from fluctmatch import fluctmatch_interface\n',
+                 f'bigtraj_folder = \'{self.rootfolder}\'',
+                 f'charmm = \'/home/yizaochen/c39b1_yizao/exec/gnu/charmm\'',
+                 f'host = \'{self.host}\'',
+                 f'type_na = \'{self.type_na}\'',
+                 f'time_label = \'{self.time_label}\'',
+                 'cutoff=4.7',
+                 f'start={start}',
+                 f'end={end}\n',
+                 f'fluctmatch_interface.main_split_window(bigtraj_folder, host, type_na, time_label, cutoff, start, end, charmm)']
+        f = open(self.pyfile, 'w')
+        for line in lines:
+            f.write(line)
+            f.write('\n')
+        f.close()
+        print(f'Generate {self.pyfile}')
+
+    def make_qsub_file(self, path_to_pythonexec):
+        check_dir_exist_and_make(self.qsub_folder)
+        jobname = f'{self.host}_{self.time_label}'
+        wtime = '48:00:00'
+        run_n_node = 1
+        run_n_cpu = 16
+        p_agent = PBSAgent(self.qsub_file, jobname, wtime, run_n_node, run_n_cpu, path_to_pythonexec)
+        p_agent.open_file()
+        p_agent.pbssuffix()
+        p_agent.set_pythonexec()
+        p_agent.cutomize_part(self.pyfile)
+        p_agent.close_file()
+
+    def submit_qsub(self):
+        cmd = 'qsub {0}'.format(self.qsub_file)
+        print(cmd)
+        system(cmd)  

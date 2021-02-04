@@ -1,20 +1,17 @@
 from os import path, system
 import numpy as np
 
-rootfolder = '/home/yizaochen/fluct_diffcutoff'
-logfolder = '/home/yizaochen/log'
-pythonexec = '/home/yizaochen/miniconda3/envs/mdaenv/bin/python3.6'
-d_abbr = {'arna+arna': 'ARR', 'bdna+bdna': 'BDD'}
-
-
 class PBSAgent:
-    def __init__(self, filename, jobname, walltime, n_node, n_cpu, logfile):
+    logfolder = '/home/yizaochen/log'
+
+    def __init__(self, filename, jobname, walltime, n_node, n_cpu, pythonexec):
         self.filename = filename
         self.jobname = jobname
         self.walltime = walltime
         self.n_node = n_node
         self.n_cpu = n_cpu
-        self.logfile = logfile
+        self.logfile = path.join(self.logfolder, f'{self.jobname}.log')
+        self.pythonexec = pythonexec
 
         self.f = None
         
@@ -34,18 +31,12 @@ class PBSAgent:
         self.f.write("#PBS -o {0}\n".format(self.logfile))
         self.f.write('#PBS -r n\n')
 
-    def rootfolder_exec(self):
-        self.f.write('rootdir=\'{0}\'\n'.format(rootfolder))
-        self.f.write('pythonexec=\'{0}\'\n\n'.format(pythonexec))
+    def set_pythonexec(self):
+        self.f.write('pythonexec=\'{0}\'\n\n'.format(self.pythonexec))
         
-    def cutomize_part(self, h, tna, cutoff, start, end):
-        self.f.write('host=\'{0}\'\n'.format(h))
-        self.f.write('type_na=\'{0}\'\n'.format(tna))
-        self.f.write('cutoff=\'{0:.2f}\'\n'.format(cutoff))
-        self.f.write('start_iter=\'{0}\'\n'.format(start))
-        self.f.write('end_iter=\'{0}\'\n'.format(end))
-        self.f.write('program=$rootdir/fluctmatch_interface.py\n')
-        self.f.write('$pythonexec $program $host $type_na $cutoff $start_iter $end_iter\n\n')
+    def cutomize_part(self, path_to_py):
+        self.f.write(f'program={path_to_py}\n')
+        self.f.write('$pythonexec $program\n\n')
         
 if __name__ == '__main__':
     host = 'pnas_amber_16mer'
