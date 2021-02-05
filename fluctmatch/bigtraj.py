@@ -245,7 +245,7 @@ class SmallTrajAgent(ENMAgent):
     def initialize_folders(self):
         for folder in [self.host_folder, self.na_folder, self.time_folder, self.input_folder,
                        self.charmminp_folder, self.charmmdat_folder, self.ic_folder, self.mat_folder,
-                       self.rtficstr_folder, self.datafolder, self.backupfolder, self.scratchfolder]:
+                       self.rtficstr_folder, self.datafolder, self.backupfolder]:
             check_dir_exist_and_make(folder)
         
     def initialize_scratch_folders(self):
@@ -339,7 +339,7 @@ class SmallTrajAgent(ENMAgent):
     def make_python_fluct_main(self, start, end):
         lines = ['from fluctmatch import fluctmatch_interface\n',
                  f'bigtraj_folder = \'{self.rootfolder}\'',
-                 f'charmm = \'/home/yizaochen/opt/c41b1_yz/exec/charmm\'',
+                 f'charmm = \'/home/roychen/usr/c43b1/exec/gnu/charmm\'',
                  f'host = \'{self.host}\'',
                  f'type_na = \'{self.type_na}\'',
                  f'time_label = \'{self.time_label}\'',
