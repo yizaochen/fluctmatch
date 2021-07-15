@@ -147,6 +147,28 @@ class BigTrajAgent(AvgcrddcdAgent):
         cmd = f'scp {old_f} yizaochen@multiphysics:{new_f}'
         print(cmd)
 
+    def download_resultzip_from_multiphysics(self):
+        old_f = path.join(self.multiscale_bigtraj_folder, 'zipfiles', f'{self.host}_results.zip')
+        new_f = path.join(self.bigtraj_folder, f'{self.host}_results.zip')
+        cmd = f'scp yizaochen@multiphysics:{old_f} {new_f}'
+        print(cmd)
+
+    def unzip_to_tempresults(self):
+        temp_results = path.join(self.bigtraj_folder, 'temp_results')
+        temp_host_folder = path.join(temp_results, self.host)
+        f_zip = path.join(self.bigtraj_folder, f'{self.host}_results.zip')
+        check_dir_exist_and_make(temp_host_folder)
+        with zipfile.ZipFile(f_zip, 'r') as zip_ref:
+            zip_ref.extractall(temp_host_folder)
+        info = f'Unzip {f_zip} into {temp_host_folder}'
+        print(info)
+
+    def redistribute_results(self, cutoff):
+        temp_results = path.join(self.bigtraj_folder, 'temp_results')
+        temp_host_folder = path.join(temp_results, self.host)
+        for time1, time2 in self.time_list:
+            agent = self.d_smallagents[(time1,time2)]
+            agent.redistribute(temp_host_folder, cutoff)      
 
 class BigTrajOnServer(BigTrajAgent):
     def __init__(self, host, type_na, bigtraj_folder):
@@ -183,7 +205,17 @@ class BigTrajOnServer(BigTrajAgent):
     def submit_all_qsubs(self):
         for time1, time2 in self.time_list:
             agent = self.d_smallagents[(time1,time2)]
-            agent.submit_qsub()    
+            agent.submit_qsub()
+
+    def zip_all_results(self, cutoff):
+        for time1, time2 in self.time_list:
+            agent = self.d_smallagents[(time1,time2)]
+            agent.check_result_zipfolder(self.zipfolder)
+            agent.copy_result_to_zipfolder(self.zipfolder, cutoff)
+        output_name = path.join(self.zipfolder, f'{self.host}_results')
+        target_name = path.join(self.zipfolder, self.host)
+        make_archive(output_name, 'zip', target_name)
+        print(f'Archive {target_name} into {output_name}.zip')
 
 
 class SmallTrajAgent(ENMAgent):
@@ -241,6 +273,7 @@ class SmallTrajAgent(ENMAgent):
 
         self.ics = dict()
         self.avgs = dict()
+
 
     def initialize_folders(self):
         for folder in [self.host_folder, self.na_folder, self.time_folder, self.input_folder,
@@ -371,3 +404,25 @@ class SmallTrajAgent(ENMAgent):
         cmd = 'qsub {0}'.format(self.qsub_file)
         print(cmd)
         system(cmd)  
+
+    def check_result_zipfolder(self, ziproot):
+        zip_host_folder = path.join(ziproot, self.host)
+        zip_na_folder = path.join(zip_host_folder, self.type_na)
+        zip_time_folder = path.join(zip_na_folder, self.time_label)
+        for folder in [zip_host_folder, zip_na_folder, zip_time_folder]:
+            check_dir_exist_and_make(folder)
+
+    def copy_result_to_zipfolder(self, ziproot, cutoff):
+        zip_host_folder = path.join(ziproot, self.host)
+        zip_na_folder = path.join(zip_host_folder, self.type_na)
+        zip_time_folder = path.join(zip_na_folder, self.time_label)
+        oldfile = path.join(self.time_folder, 'cutoffdata', f'na_enm_{cutoff:.2f}.prm')
+        newfile = path.join(zip_time_folder, f'na_enm_{cutoff:.2f}.prm')
+        copyfile(oldfile, newfile)
+        print(f'cp {oldfile} {newfile}')
+
+    def redistribute(self, temp_host_folder, cutoff):
+        oldfile = path.join(temp_host_folder, self.type_na, self.time_label, f'na_enm_{cutoff:.2f}.prm')
+        newfile = path.join(self.datafolder, f'na_enm_{cutoff:.2f}.prm')
+        copyfile(oldfile, newfile)
+        print(f'cp {oldfile} {newfile}')       
