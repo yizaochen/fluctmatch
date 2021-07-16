@@ -43,5 +43,6 @@ sequences = {'pnas': {'arna+arna': {'guide': 'CAAUGGAGUA',
              'atat_21mer': {'bdna+bdna': {'guide': 'ATATATATATATATATATATA', 'target': 'TATATATATATATATATATAT'}},
              'gcgc_21mer': {'bdna+bdna': {'guide': 'GCGCGCGCGCGCGCGCGCGCG', 'target': 'CGCGCGCGCGCGCGCGCGCGC'}},
              'tgtg_21mer': {'bdna+bdna': {'guide': 'TGTGTGTGTGTGTGTGTGTGT', 'target': 'ACACACACACACACACACACA'}},
-             'ctct_21mer': {'bdna+bdna': {'guide': 'CTCTCTCTCTCTCTCTCTCTC', 'target': 'GAGAGAGAGAGAGAGAGAGAG'}}
+             'ctct_21mer': {'bdna+bdna': {'guide': 'CTCTCTCTCTCTCTCTCTCTC', 'target': 'GAGAGAGAGAGAGAGAGAGAG'}},
+             'tat_21mer': {'bdna+bdna': {'guide': 'CGCAAAAAATATAAAAAAGCG', 'target': 'CGCTTTTTTATATTTTTTGCG'}}
              }
