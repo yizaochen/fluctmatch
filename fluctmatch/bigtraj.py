@@ -195,7 +195,7 @@ class BigTrajAgent(AvgcrddcdAgent):
             agent.redistribute(temp_host_folder, cutoff)      
 
 class BigTrajOnServer(BigTrajAgent):
-    def __init__(self, host, type_na, bigtraj_folder):
+    def __init__(self, host, type_na, bigtraj_folder, split_5=True):
         self.host = host
         self.type_na = type_na
         self.bigtraj_folder = bigtraj_folder
@@ -206,7 +206,11 @@ class BigTrajOnServer(BigTrajAgent):
         self.zipfolder = path.join(self.bigtraj_folder, 'zipfiles')
         self.f_zip = path.join(self.zipfolder, f'{host}.zip')
 
-        self.time_list, self.mdnum_list = self.get_time_list()
+        if split_5:
+            self.time_list, self.mdnum_list = self.get_time_list_split_5()
+        else:
+            self.time_list, self.mdnum_list = self.get_time_list()
+
         self.d_smallagents = self.get_all_small_agents()
 
     def unarchive_folder(self):
@@ -440,7 +444,7 @@ class SmallTrajAgent(ENMAgent):
     def make_python_fluct_main(self, start, end):
         lines = ['from fluctmatch import fluctmatch_interface\n',
                  f'bigtraj_folder = \'{self.rootfolder}\'',
-                 f'charmm = \'/home/roychen/usr/c43b1/exec/gnu/charmm\'',
+                 f'charmm = \'/home/yizaochen/c39b1_yizao/exec/gnu/charmm\'',
                  f'host = \'{self.host}\'',
                  f'type_na = \'{self.type_na}\'',
                  f'time_label = \'{self.time_label}\'',

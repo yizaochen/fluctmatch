@@ -32,6 +32,7 @@ class PBSAgent:
         self.f.write('#PBS -r n\n')
 
     def set_pythonexec(self):
+        self.f.write('conda activate fluctmatch\n')
         self.f.write('pythonexec=\'{0}\'\n\n'.format(self.pythonexec))
         
     def cutomize_part(self, path_to_py):
