@@ -17,18 +17,31 @@ class BigTrajAgent(AvgcrddcdAgent):
     interval_time = 1000 # unit: ns
     gmx = '/usr/bin/gmx'
 
-    multiscale_bigtraj_folder = '/home/yizaochen/bigtraj_fluctmatch'
+    multiscale_bigtraj_folder = '/home/yizaochen/bigtraj_fluctmatch/split_5'
 
-    def __init__(self, host, type_na, allsys_folder, bigtraj_folder, simu_folder):
+    def __init__(self, host, type_na, allsys_folder, bigtraj_folder, simu_folder, split_5=True):
         super().__init__(host, type_na, allsys_folder)
         self.allsys_folder = allsys_folder
         self.bigtraj_folder = bigtraj_folder
         self.simu_folder = simu_folder
 
-        self.time_list, self.mdnum_list = self.get_time_list()
+        if split_5:
+            self.time_list, self.mdnum_list = self.get_time_list_split_5()
+        else:
+            self.time_list, self.mdnum_list = self.get_time_list()
+
         self.d_smallagents = self.get_all_small_agents()
 
         self.d_pairs = None
+
+    def get_time_list_split_5(self):
+        n_split = 5 # ad hoc
+        mdnum_list = list()
+        time_list = list()
+        for time1 in range(n_split):
+            time2 = time1 + 1
+            time_list.append((time1, time2))
+        return time_list, mdnum_list     
 
     def get_time_list(self):
         middle_interval = int(self.interval_time/2)
@@ -58,6 +71,12 @@ class BigTrajAgent(AvgcrddcdAgent):
         refcrd = path.join(self.heavy_folder, '{0}.nohydrogen.crd'.format(self.type_na))
         for time1, time2 in self.time_list:
             self.d_smallagents[(time1,time2)].get_refcrd(refcrd)
+
+    def concatenate_xtc_by_gmx_split_5(self, mdnum1=1, mdnum2=50):
+        start_time = 100
+        for time1, time2 in self.time_list:
+            self.d_smallagents[(time1,time2)].concatenate_trajectory_split_5(self.gmx, self.simu_folder, self.type_na, mdnum1, mdnum2, start_time)
+            start_time += 100
 
     def concatenate_xtc_by_gmx(self):
         for timezip, mdnum_zip in zip(self.time_list, self.mdnum_list):
@@ -89,6 +108,11 @@ class BigTrajAgent(AvgcrddcdAgent):
     def check_nohydrogen_dcd_status(self):
         for time1, time2 in self.time_list:
             self.d_smallagents[(time1,time2)].check_size('dcd_out')
+
+    def make_avg_crd(self):
+        for time1, time2 in self.time_list:
+            self.d_smallagents[(time1,time2)].make_avg_crd_input(amber=True, firstter='amber_5ter', lastter='amber_3ter')
+            self.d_smallagents[(time1,time2)].make_avg_crd()
 
     def set_required_dictionaries(self):
         for time1, time2 in self.time_list:
@@ -254,7 +278,7 @@ class SmallTrajAgent(ENMAgent):
 
         self.enmprm = path.join(self.datafolder, 'na_enm.prm')
         #self.mode0dcd = path.join(self.mode_traj_folder, 'mode.0.dcd')
-        #self.crd = path.join(self.input_folder, '{0}.nohydrogen.avg.crd'.format(self.type_na))
+        self.avg_crd = path.join(self.input_folder, '{0}.nohydrogen.avg.crd'.format(self.type_na))
         self.crd = path.join(self.input_folder, '{0}.nohydrogen.crd'.format(self.type_na))
         self.xtc_in = path.join(self.input_folder, f'{time_label}.xtc')
         self.dcd_in = path.join(self.input_folder, f'{time_label}.dcd')
@@ -288,6 +312,17 @@ class SmallTrajAgent(ENMAgent):
     def get_refcrd(self, refcrd):
         copyfile(refcrd, self.crd)
         print(f'cp {refcrd} {self.crd}')
+
+    def concatenate_trajectory_split_5(self, gmx, simu_folder, type_na, start, end, starttime):
+        na_folder = path.join(simu_folder, self.host, self.type_na)
+        roughdir = path.join(na_folder, 'data','roughtrj','1000')
+        alltrajfiles = ''
+        for mdnum in range(start, end+1):
+            filename = path.join(roughdir, '{0}.nopbc.fit.{1}.1000.xtc'.format(type_na, str(mdnum)))
+            alltrajfiles = alltrajfiles + filename + ' '
+        command = '{0} trjcat -f {1} -o {2} -dt 100 -b {3}'.format(gmx, alltrajfiles, self.xtc_in, starttime)
+        print(command)
+        system(command)
         
     def concatenate_trajectory(self, gmx, simu_folder, type_na, start, end):
         na_folder = path.join(simu_folder, self.host, self.type_na)
@@ -367,6 +402,39 @@ class SmallTrajAgent(ENMAgent):
     def make_no_h_dcd(self):
         f_inp = path.join(self.charmminp_folder, 'write_no_h_dcd.inp')
         f_dat = path.join(self.charmmdat_folder, 'write_no_h_dcd.dat')
+        exec_charmm(f_inp, f_dat)
+
+    def make_avg_crd_input(self, selection='all', amber=False, firstter=None, lastter=None):
+        if self.type_na == 'arna+arna':
+            supplement1 = None
+            supplement2 = None 
+        else:
+            supplement1 = get_patch(self.seq1, 1)
+            supplement2 = get_patch(self.seq2, 2)
+
+        f_inp = path.join(self.charmminp_folder, 'write_no_h_avg_crd.inp')
+
+        inp = Script(f_inp)
+        inp.write_bomlev()
+        inp.initialize_rtf_prm(amber=amber)
+        inp.write_seq(self.seq1, firstter=firstter, lastter=lastter, segid='strand1')
+        if supplement1 is not None:
+            inp.write_supplement(supplement1)
+        inp.write_seq(self.seq2, firstter=firstter, lastter=lastter, segid='strand2')
+        if supplement2 is not None:
+            inp.write_supplement(supplement2)
+        inp.gen_angle_dihedral()
+        inp.delete_selection()
+        inp.read_crd(self.crd)
+        inp.read_traj(self.dcd_out)
+        inp.calculate_avg(selection=selection)
+        inp.coor_copy()
+        inp.write_crd(self.avg_crd, comp=True)
+        inp.end()
+
+    def make_avg_crd(self):
+        f_inp = path.join(self.charmminp_folder, 'write_no_h_avg_crd.inp')
+        f_dat = path.join(self.charmmdat_folder, 'write_no_h_avg_crd.dat')
         exec_charmm(f_inp, f_dat)
 
     def make_python_fluct_main(self, start, end):
