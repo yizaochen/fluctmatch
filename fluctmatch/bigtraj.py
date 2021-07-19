@@ -14,12 +14,10 @@ class BigTrajAgent(AvgcrddcdAgent):
 
     start_time = 0
     end_time = 5000 # 5000 ns
-    interval_time = 1000 # unit: ns
+    interval_time = 1000
     gmx = '/usr/bin/gmx'
-
-    multiscale_bigtraj_folder = '/home/yizaochen/bigtraj_fluctmatch/split_5'
-
-    def __init__(self, host, type_na, allsys_folder, bigtraj_folder, simu_folder, split_5=True):
+    
+    def __init__(self, host, type_na, allsys_folder, bigtraj_folder, simu_folder, split_5=True, one_big_window=False):
         super().__init__(host, type_na, allsys_folder)
         self.allsys_folder = allsys_folder
         self.bigtraj_folder = bigtraj_folder
@@ -27,8 +25,13 @@ class BigTrajAgent(AvgcrddcdAgent):
 
         if split_5:
             self.time_list, self.mdnum_list = self.get_time_list_split_5()
+            self.multiscale_bigtraj_folder = '/home/yizaochen/bigtraj_fluctmatch/split_5'
+        elif one_big_window:
+            self.time_list, self.mdnum_list = self.get_time_list_one_big_window()
+            self.multiscale_bigtraj_folder = '/home/yizaochen/bigtraj_fluctmatch/5000ns'
         else:
             self.time_list, self.mdnum_list = self.get_time_list()
+            self.multiscale_bigtraj_folder = '/home/yizaochen/bigtraj_fluctmatch/1000ns'
 
         self.d_smallagents = self.get_all_small_agents()
 
@@ -41,6 +44,11 @@ class BigTrajAgent(AvgcrddcdAgent):
         for time1 in range(n_split):
             time2 = time1 + 1
             time_list.append((time1, time2))
+        return time_list, mdnum_list   
+
+    def get_time_list_one_big_window(self):
+        mdnum_list = list()
+        time_list = [(0, 5000)]
         return time_list, mdnum_list     
 
     def get_time_list(self):
@@ -52,7 +60,7 @@ class BigTrajAgent(AvgcrddcdAgent):
             time2 = time1 + self.interval_time
             if time2 <= self.end_time:
                 time_list.append((time1, time2))
-                mdnum_list.append((mdnum1, mdnum1+9))
+                mdnum_list.append((mdnum1, mdnum1+9)) # This should be more general
             mdnum1 += 5
         return time_list, mdnum_list
 
@@ -72,6 +80,15 @@ class BigTrajAgent(AvgcrddcdAgent):
         for time1, time2 in self.time_list:
             self.d_smallagents[(time1,time2)].get_refcrd(refcrd)
 
+    def copy_no_h_5us_dcd_to_smallfolder(self):
+        for time1, time2 in self.time_list:
+            noh_dcd = path.join(self.allsys_folder, self.host, self.type_na, 'input', 'heavyatoms', f'{self.type_na}.nohydrogen.dcd')
+            self.d_smallagents[(time1,time2)].get_dcdout(noh_dcd)
+
+    def check_no_h_5us_dcd(self):
+        for time1, time2 in self.time_list:
+            self.d_smallagents[(time1,time2)].vmd_check_dcdout()
+
     def concatenate_xtc_by_gmx_split_5(self, mdnum1=1, mdnum2=50):
         start_time = 100
         for time1, time2 in self.time_list:
@@ -83,7 +100,7 @@ class BigTrajAgent(AvgcrddcdAgent):
             time1, time2 = timezip
             mdnum1, mdnum2 = mdnum_zip
             self.d_smallagents[(time1,time2)].concatenate_trajectory(self.gmx, self.simu_folder, self.type_na, mdnum1, mdnum2)
-    
+
     def remove_all_redudant_xtc_dcd(self):
         for time1, time2 in self.time_list:
             self.d_smallagents[(time1,time2)].remove_redundant_trajectories()
@@ -177,6 +194,12 @@ class BigTrajAgent(AvgcrddcdAgent):
         cmd = f'scp yizaochen@multiphysics:{old_f} {new_f}'
         print(cmd)
 
+    def download_resultzip_from_multiscale(self):
+        old_f = path.join(self.multiscale_bigtraj_folder, 'zipfiles', f'{self.host}_results.zip')
+        new_f = path.join(self.bigtraj_folder, f'{self.host}_results.zip')
+        cmd = f'scp yizaochen@multiscale:{old_f} {new_f}'
+        print(cmd)
+
     def unzip_to_tempresults(self):
         temp_results = path.join(self.bigtraj_folder, 'temp_results')
         temp_host_folder = path.join(temp_results, self.host)
@@ -195,7 +218,7 @@ class BigTrajAgent(AvgcrddcdAgent):
             agent.redistribute(temp_host_folder, cutoff)      
 
 class BigTrajOnServer(BigTrajAgent):
-    def __init__(self, host, type_na, bigtraj_folder, split_5=True):
+    def __init__(self, host, type_na, bigtraj_folder, split_5=True, one_big_window=False):
         self.host = host
         self.type_na = type_na
         self.bigtraj_folder = bigtraj_folder
@@ -208,6 +231,8 @@ class BigTrajOnServer(BigTrajAgent):
 
         if split_5:
             self.time_list, self.mdnum_list = self.get_time_list_split_5()
+        elif one_big_window:
+            self.time_list, self.mdnum_list = self.get_time_list_one_big_window()
         else:
             self.time_list, self.mdnum_list = self.get_time_list()
 
@@ -316,6 +341,13 @@ class SmallTrajAgent(ENMAgent):
     def get_refcrd(self, refcrd):
         copyfile(refcrd, self.crd)
         print(f'cp {refcrd} {self.crd}')
+
+    def get_dcdout(self, noh_dcd):
+        copyfile(noh_dcd, self.dcd_out)
+        print(f'cp {noh_dcd} {self.dcd_out}')
+
+    def vmd_check_dcdout(self):
+        print(f'vmd -cor {self.crd} {self.dcd_out}')
 
     def concatenate_trajectory_split_5(self, gmx, simu_folder, type_na, start, end, starttime):
         na_folder = path.join(simu_folder, self.host, self.type_na)

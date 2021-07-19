@@ -233,7 +233,7 @@ def main_split_window(rootfolder, host, type_na, time_label, cutoff, start, end,
     # IC Avg
     icavg_inp = path.join(charmminpfolder, 'ic_avg_{0:.2f}.inp'.format(cutoff))
     icavg_dat = path.join(charmmdatfolder, 'ic_avg_{0:.2f}.dat'.format(cutoff))
-    write_ic_avg_inp(icavg_inp, host, type_na, time_label, cutoff, rootfolder, distance_average=False) # Important! Check Fix b0
+    write_ic_avg_inp(icavg_inp, host, type_na, time_label, cutoff, rootfolder, distance_average=True) # Important! Check Fix b0
     exec_charmm(charmm, icavg_inp, icavg_dat)
     mode0avgic = path.join(icfolder, 'mode.0.avg.{0:.2f}.ic'.format(cutoff))
     naavgic = path.join(datafolder, 'na.avg.{0:.2f}.ic'.format(cutoff))
